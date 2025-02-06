@@ -19,27 +19,261 @@ def round_currency(amount):
     else:
         return float(Decimal(str(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
-def calculate_real_rate(nominal_rate, inflation_rate):
-    """Calculate real rate using Fisher Effect: (1 + R) = (1 + r)(1 + h)"""
-    return (1 + nominal_rate) / (1 + inflation_rate) - 1
+def calculate_real_rate(nominal_rate, inflation_rate, frequency='annual', compound_type='discrete'):
+    """Calculate real rate using Fisher Effect with enhanced features
+    
+    Args:
+        nominal_rate: Nominal interest rate as decimal
+        inflation_rate: Expected inflation rate as decimal
+        frequency: Compounding frequency ('annual', 'semiannual', 'monthly', 'daily', 'continuous')
+        compound_type: Type of compounding ('discrete' or 'continuous')
+        
+    Returns:
+        Real interest rate as decimal
+        
+    Raises:
+        ValueError: If rates are invalid or frequency/compound_type not supported
+    """
+    # Validate inputs
+    if nominal_rate <= -1:
+        raise ValueError("Nominal rate must be > -100%")
+    if inflation_rate <= -1:
+        raise ValueError("Inflation rate must be > -100%")
+        
+    # Handle continuous compounding
+    if compound_type == 'continuous':
+        # For continuous compounding: r_real = r_nominal - r_inflation
+        return nominal_rate - inflation_rate
+        
+    # Convert rates to the same frequency if not annual
+    if frequency != 'annual':
+        nominal_rate = convert_rate(nominal_rate, 'annual', frequency)
+        inflation_rate = convert_rate(inflation_rate, 'annual', frequency)
+        
+    # Calculate real rate using Fisher equation
+    real_rate = (1 + nominal_rate) / (1 + inflation_rate) - 1
+    
+    # Handle deflation case (negative inflation)
+    if inflation_rate < 0:
+        sys.stderr.write("Warning: Negative inflation (deflation) detected\n")
+        
+    return real_rate
 
-def convert_rate(rate, from_freq, to_freq):
+def convert_rate(rate, from_freq, to_freq, compound_type='discrete', day_count='actual/360'):
     """Convert interest rate between different payment frequencies"""
     freq_map = {
         'annual': 1,
         'semiannual': 2,
-        'monthly': 12
+        'monthly': 12,
+        'daily': 365,
+        'continuous': float('inf')
     }
+    
+    day_count_map = {
+        'actual/360': 360,
+        'actual/365': 365,
+        'actual/actual': 365.25,
+        '30/360': 360
+    }
+    
+    # Validate inputs
+    if rate <= -1:
+        raise ValueError("Rate must be > -100%")
     
     if from_freq not in freq_map or to_freq not in freq_map:
         raise ValueError(f"Invalid frequency. Must be one of: {list(freq_map.keys())}")
         
+    if day_count not in day_count_map:
+        raise ValueError(f"Invalid day count convention. Must be one of: {list(day_count_map.keys())}")
+        
+    if compound_type not in ['discrete', 'continuous']:
+        raise ValueError("Compound type must be 'discrete' or 'continuous'")
+        
     if from_freq == to_freq:
         return rate
+    
+    # Handle continuous compounding cases
+    if compound_type == 'continuous':
+        if from_freq == 'continuous':
+            # Converting from continuous to discrete
+            effective_annual = math.exp(rate) - 1
+        else:
+            # Converting to continuous from discrete
+            if to_freq == 'continuous':
+                # First convert to effective annual
+                if from_freq == 'annual':
+                    effective_annual = rate
+                else:
+                    effective_annual = (1 + rate/freq_map[from_freq])**freq_map[from_freq] - 1
+                # Then convert to continuous
+                return math.log(1 + effective_annual)
+            else:
+                raise ValueError("When compound_type is 'continuous', to_freq must be 'continuous'")
+    else:
+        # Handle discrete compounding
+        if from_freq == 'continuous':
+            raise ValueError("For continuous source rate, compound_type must be 'continuous'")
+            
+        # Convert to effective annual rate first
+        if from_freq == 'annual':
+            effective_annual = rate
+        else:
+            # Adjust rate based on day count convention for non-annual frequencies
+            if from_freq == 'daily':
+                adj_rate = rate * day_count_map[day_count] / 365.25
+                effective_annual = (1 + adj_rate/freq_map[from_freq])**freq_map[from_freq] - 1
+            else:
+                effective_annual = (1 + rate/freq_map[from_freq])**freq_map[from_freq] - 1
         
-    # Convert to effective annual rate then to target frequency
-    effective_annual = (1 + rate/freq_map[from_freq])**freq_map[from_freq] - 1
-    return (1 + effective_annual)**(1/freq_map[to_freq]) - 1
+    # Convert from effective annual to target frequency
+    if to_freq == 'continuous':
+        return math.log(1 + effective_annual)
+    elif to_freq == 'daily':
+        # Adjust for day count convention
+        unadj_rate = (1 + effective_annual)**(1/freq_map[to_freq]) - 1
+        return unadj_rate * 365.25 / day_count_map[day_count]
+    else:
+        return (1 + effective_annual)**(1/freq_map[to_freq]) - 1
+
+def get_day_count_factor(start_date, end_date, convention='actual/360'):
+    """Calculate day count factor based on convention"""
+    actual_days = (end_date - start_date).days
+    if convention == '30/360':
+        return 360  # Simplified 30/360 for now
+    return actual_days
+
+class BondCalculator:
+    """Enhanced bond calculations including duration and convexity"""
+    def __init__(self, face_value, coupon_rate, maturity, settlement_date=None,
+                 frequency=2, day_count='30/360'):
+        """
+        Args:
+            face_value: Bond's par value
+            coupon_rate: Annual coupon rate as decimal
+            maturity: Years to maturity
+            settlement_date: Settlement date for accrued interest
+            frequency: Payment frequency (2 for semiannual, 12 for monthly)
+            day_count: Day count convention for accrued interest
+        """
+        self.face_value = face_value
+        self.coupon_rate = coupon_rate
+        self.maturity = maturity
+        self.frequency = frequency
+        self.day_count = day_count
+        self.settlement_date = settlement_date
+        
+        # Calculate coupon payment
+        self.coupon_payment = (face_value * coupon_rate) / frequency
+        
+    def price(self, ytm):
+        """Calculate clean price (excluding accrued interest)
+        
+        Args:
+            ytm: Yield to maturity (annual rate as decimal)
+        """
+        periods = self.maturity * self.frequency
+        rate_per_period = ytm / self.frequency
+        
+        # Calculate present value of cash flows
+        pv_face = self.face_value / (1 + rate_per_period)**periods
+        pv_coupons = 0
+        
+        for t in range(1, int(periods) + 1):
+            pv_coupons += self.coupon_payment / (1 + rate_per_period)**t
+            
+        return pv_face + pv_coupons
+        
+    def duration(self, ytm):
+        """Calculate Macaulay duration
+        
+        Args:
+            ytm: Yield to maturity (annual rate as decimal)
+        """
+        periods = self.maturity * self.frequency
+        rate_per_period = ytm / self.frequency
+        price = self.price(ytm)
+        
+        # Calculate weighted present values
+        duration = 0
+        for t in range(1, int(periods) + 1):
+            # Weight each cash flow by its time period
+            if t == periods:
+                cf = self.coupon_payment + self.face_value
+            else:
+                cf = self.coupon_payment
+                
+            pv_cf = cf / (1 + rate_per_period)**t
+            duration += (t * pv_cf)
+            
+        # Convert to years and normalize by price
+        return duration / price / self.frequency
+        
+    def modified_duration(self, ytm):
+        """Calculate modified duration
+        
+        Args:
+            ytm: Yield to maturity (annual rate as decimal)
+        """
+        mac_duration = self.duration(ytm)
+        return mac_duration / (1 + ytm/self.frequency)
+        
+    def convexity(self, ytm):
+        """Calculate convexity
+        
+        Args:
+            ytm: Yield to maturity (annual rate as decimal)
+        """
+        periods = self.maturity * self.frequency
+        rate_per_period = ytm / self.frequency
+        price = self.price(ytm)
+        
+        convexity = 0
+        for t in range(1, int(periods) + 1):
+            if t == periods:
+                cf = self.coupon_payment + self.face_value
+            else:
+                cf = self.coupon_payment
+                
+            # Weight by time squared
+            pv_cf = cf / (1 + rate_per_period)**t
+            convexity += (t * (t + 1) * pv_cf)
+            
+        # Normalize and adjust for payment frequency
+        return convexity / (price * (1 + rate_per_period)**2 * self.frequency**2)
+        
+    def accrued_interest(self):
+        """Calculate accrued interest if settlement date is provided"""
+        if not self.settlement_date:
+            return 0
+            
+        # Get the last coupon date and next coupon date
+        days_between_coupons = 360 / self.frequency  # Using 360-day year
+        days_in_year = 360 if self.day_count == '30/360' else 365
+        
+        # Calculate days since last coupon
+        if self.day_count == '30/360':
+            # 30/360 convention
+            month_diff = self.settlement_date.month - self.settlement_date.replace(day=1).month
+            day_diff = min(30, self.settlement_date.day)
+            days_accrued = month_diff * 30 + day_diff
+        else:
+            # Actual/360 or Actual/365
+            last_coupon = self.settlement_date.replace(
+                day=1,  # Start of month
+                month=((self.settlement_date.month - 1) // (12 // self.frequency)) * (12 // self.frequency) + 1
+            )
+            days_accrued = (self.settlement_date - last_coupon).days
+        
+        # Calculate accrued interest
+        annual_coupon = self.coupon_rate * self.face_value
+        period_coupon = annual_coupon / self.frequency
+        
+        if self.day_count == '30/360':
+            accrued = period_coupon * (days_accrued / days_between_coupons)
+        else:
+            accrued = period_coupon * (days_accrued / days_in_year) * (self.frequency)
+            
+        return round_currency(accrued)
 
 class BalanceSheetCalculator:
     """Calculator for balance sheet problems"""
@@ -318,7 +552,20 @@ For multi-step calculations:
     - When inflation mentioned, adjust rate
     - Real rate = (1 + nominal)/(1 + inflation) - 1
     Example: "11% return with 3.2% inflation"
-    → Set inflation_rate: 0.032
+    {
+      "steps": [
+        {
+          "id": "real_rate",
+          "problem_type": "RATE",
+          "result_var": "real_rate",
+          "params": {
+            "nominal_rate": 0.11,
+            "inflation_rate": 0.032
+          },
+          "final_step": true
+        }
+      ]
+    }
 
 6. Timing Rules:
     - Set payment_frequency based on payment schedule:
@@ -357,7 +604,9 @@ For multi-step calculations:
     - fv: Future value
     - payment_frequency: 'annual', 'semiannual', or 'monthly'
     - inflation_rate: If mentioned, used to calculate real rate
-    - is_bond: true for bond calculations with semiannual payments"""
+    - is_bond: true for bond calculations with semiannual payments
+    - compound_type: 'discrete' or 'continuous' if mentioned
+    Look for keywords: 'continuous', 'continuously compounded', 'day count', 'settlement date'"""
 
     # JSON template as a raw string
     json_template = r"""
@@ -377,6 +626,7 @@ For multi-step calculations:
                  "fv": 0,
                  "payment_frequency": "annual",
                  "inflation_rate": null,
+                  "compound_type": "discrete",
                  "is_bond": false
              },
              "final_step": false
@@ -444,7 +694,7 @@ Important:
 def calculate_financial(problem_type, params):
     """Calculate financial result using numpy-financial"""
     try:        
-        # Extract parameters with validation
+        # Extract and validate parameters
         rate = params.get('rate', 0)
         nper = params.get('nper', 0)
         pmt = params.get('pmt', 0)
@@ -453,6 +703,7 @@ def calculate_financial(problem_type, params):
         payment_freq = params.get('payment_frequency', 'annual')
         inflation_rate = params.get('inflation_rate')
         is_bond = params.get('is_bond', False)
+        compound_type = params.get('compound_type', 'discrete')
         
         # Validate payment frequency
         valid_frequencies = ['annual', 'semiannual', 'monthly']
@@ -466,9 +717,23 @@ def calculate_financial(problem_type, params):
 
         # Calculate real rate if inflation rate is provided
         if inflation_rate is not None:
-            rate = calculate_real_rate(rate, inflation_rate)
+            if problem_type == 'RATE':
+                # For RATE problems, just calculate real rate directly
+                return calculate_real_rate(params['nominal_rate'], inflation_rate)
+            else:
+                # For other problems, adjust the rate
+                rate = calculate_real_rate(rate, inflation_rate)
 
-        # Convert rate and adjust periods based on payment frequency
+        # Handle continuous compounding
+        if compound_type == 'continuous':
+            if payment_freq != 'continuous':
+                # Convert continuous rate to discrete rate for the given frequency
+                rate = convert_rate(rate, 'continuous', payment_freq)
+            else:
+                # Use continuous rate directly
+                return math.exp(rate * nper) * pv if problem_type == 'FV' else pv * math.exp(-rate * nper)
+
+        # Handle discrete compounding
         if payment_freq == 'monthly':
             rate = rate / 12  # For monthly payments, simply divide by 12
             nper = nper * 12
@@ -484,7 +749,7 @@ def calculate_financial(problem_type, params):
         if problem_type == 'PV' and pv != 0 and not any([rate, nper, pmt, fv]):
             return pv
         
-        # Standard financial calculations
+        # Standard financial calculations with numpy-financial
         calculators = {
             'FV': lambda: npf.fv(rate, nper, pmt, pv),
             'PV': lambda: npf.pv(rate, nper, pmt, fv),
@@ -510,6 +775,11 @@ def calculate_financial(problem_type, params):
         if problem_type == 'PV' and is_bond:
             # Bond prices are quoted as positive values
             result = -result
+            
+            # For bonds with continuous compounding
+            if compound_type == 'continuous':
+                # Adjust for continuous interest accrual
+                result = result * math.exp(rate * (nper % 1))
             
         # Special handling for RATE calculations
         if problem_type == 'RATE' and payment_freq != 'annual':
@@ -551,6 +821,7 @@ def evaluate_expression(expr, results):
 def solve_financial_problem(args):
     """Solve financial problem"""
     try:
+        sys.stderr.write(f"Solving problem with args: {json.dumps(args, indent=2)}\n")
         # Handle balance sheet problems
         if 'problem_type' in args and args['problem_type'] == 'BALANCE_SHEET':
             calculator = BalanceSheetCalculator(args.get('items', {}))
@@ -560,7 +831,6 @@ def solve_financial_problem(args):
                 'results': calculator.calculate_all_metrics()
             }
 
-        sys.stderr.write(f"Solving problem with args: {json.dumps(args, indent=2)}\n")
         steps = args.get('steps', [])
         if not steps:
             # Handle legacy single-step format
@@ -595,15 +865,47 @@ def solve_financial_problem(args):
             # Calculate this step
             result = calculate_financial(step['problem_type'], params)
             
+            # Handle bond calculations if needed
+            if step.get('params', {}).get('is_bond', False):
+                try:
+                    # Create bond calculator
+                    bond = BondCalculator(
+                        face_value=params['fv'],
+                        coupon_rate=params['rate'] * 2,  # Convert to annual rate
+                        maturity=params['nper'] / 2,  # Convert to years
+                        frequency=2  # Semiannual payments
+                    )
+                    
+                    # Calculate bond metrics
+                    ytm = params['rate'] * 2  # Convert to annual rate
+                    duration = bond.duration(ytm)
+                    modified_duration = bond.modified_duration(ytm)
+                    convexity = bond.convexity(ytm)
+                    
+                    # Add metrics to results
+                    results[f"{step['result_var']}_duration"] = duration
+                    results[f"{step['result_var']}_modified_duration"] = modified_duration
+                    results[f"{step['result_var']}_convexity"] = convexity
+                    
+                    # If this is the final step, include metrics in final result
+                    if step.get('final_step', False):
+                        final_result = {
+                            'price': result,
+                            'duration': duration,
+                            'modified_duration': modified_duration,
+                            'convexity': convexity
+                        }
+                        result = final_result
+                except Exception as e:
+                    sys.stderr.write(f"Warning: Bond metrics calculation failed: {str(e)}\n")
+            
             results[step['result_var']] = result
             if step.get('final_step', False):
                 final_result = result
 
-        # Only round the final result
-        if final_result is not None:
+        # Only round currency values, not metrics
+        if isinstance(final_result, (int, float)):
             final_result = round_currency(final_result)
-            # Update the rounded final result in results dict
-            results[step['result_var']] = final_result
             
         return {
             'success': True,
