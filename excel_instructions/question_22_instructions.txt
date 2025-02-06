@@ -1,0 +1,19 @@
+Excel Instructions for Question #22
+==================================================
+
+A. Inputs:
+Rate = 4.5% (annual)
+PV = $300 (initial investment)
+FV = $756 (future value)
+
+[blank line]
+B. Calculations:
+1. Years = Number of years to reach future value
+   Excel: =NPER(Rate,0,-PV,FV)
+   ► Must equal: 21
+
+[blank line]
+C. Final Calculation:
+Years = Years to reach future value
+Excel: =Years
+► Must equal: 21

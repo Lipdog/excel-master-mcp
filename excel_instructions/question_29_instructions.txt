@@ -1,0 +1,19 @@
+Excel Instructions for Question #29
+==================================================
+
+A. Inputs:
+Nper = 8 (months)
+Pmt = $350 (monthly)
+Pv = $0
+Fv = $43,262
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = RATE function to find the monthly interest rate
+   Excel: =RATE(Nper, -Pmt, Pv, Fv)
+   ► Must equal: 0.01
+
+2. AnnualInterestRate = Monthly interest rate multiplied by 12
+   Excel: =MonthlyInterestRate*12
+   ► Must equal: 12%

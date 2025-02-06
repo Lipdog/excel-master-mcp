@@ -1,0 +1,45 @@
+Excel Instructions for Question #34
+==================================================
+
+
+For Question #34, generate Excel instructions for bond valuation:
+
+A. Inputs:
+Face_Value = $1,000.00
+Coupon_Rate = 8.20% (annual)
+YTM = 8.20% (annual)
+Years_Remaining = 10.5
+Payment_Frequency = Semiannual
+
+[blank line]
+B. Calculations:
+1. Semiannual_Rate = Annual YTM / 2
+   Excel: =8.20%/2
+   ► Must equal: 4.10%
+
+2. Number_of_Periods = Years * 2
+   Excel: =10.5*2
+   ► Must equal: 21
+
+3. Coupon_Payment = Face Value * (Annual Coupon Rate / 2)
+   Excel: =$1,000.00*(8.20%/2)
+   ► Must equal: $33.75
+
+[blank line]
+C. Bond Price Calculation:
+Bond_Price = PV of coupon payments + PV of face value
+Excel: =PV(Semiannual_Rate, Number_of_Periods, -Coupon_Payment, -Face_Value)
+► Must equal: $899.22
+
+[blank line]
+D. Verification:
+1. The bond price represents the present value of:
+   - 21 semiannual coupon payments of $33.75
+   - Face value of $1,000.00 at maturity
+
+2. Price Components:
+   - PV of Coupons: =PV(Semiannual_Rate, Number_of_Periods, -Coupon_Payment)
+   - PV of Face Value: =PV(Semiannual_Rate, Number_of_Periods, 0, -Face_Value)
+
+3. Market Rate vs Coupon Rate:
+   Bond sells at discount (Price < Face Value)

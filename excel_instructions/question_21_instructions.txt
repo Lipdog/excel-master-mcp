@@ -1,0 +1,23 @@
+Excel Instructions for Question #21
+==================================================
+
+A. Inputs:
+Nper = 60 (number of periods)
+PV = $4,500 (present value)
+FV = $430,065.11 (future value)
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+1. AnnualRate = Rate calculation
+   Excel: =RATE(Nper,0,-PV,FV)
+   ► Must equal: 8%
+
+[blank line]
+C. Final Calculation:
+AnnualRate = Annual rate of return
+Note: The rate function calculates the interest rate per period of an annuity.
+
+Excel with values: =RATE(60,0,-4500,430065.11)
+Excel with variables: =RATE(Nper,0,-PV,FV)
+► Must equal: 8%

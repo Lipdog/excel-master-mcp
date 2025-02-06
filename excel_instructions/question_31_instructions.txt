@@ -1,0 +1,28 @@
+Excel Instructions for Question #31
+==================================================
+
+A. Inputs:
+retirement_savings_pv = -$630,038.08
+Interest_Rate = 11%
+Years = 40
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+1. AnnualInterestRate = Interest rate
+   Excel: =11%
+   ► Must equal: 0.11
+
+2. NumberOfPayments = Years
+   Excel: =40
+   ► Must equal: 40
+
+3. AnnualDeposit = Calculate the annual deposit needed
+   Excel: =PMT(AnnualInterestRate, NumberOfPayments, 0, retirement_savings_pv)
+   ► Must equal: $1,082.86
+
+[blank line]
+C. Final Calculation:
+Annual Deposit Needed = AnnualDeposit
+Excel: =PMT(AnnualInterestRate, NumberOfPayments, 0, retirement_savings_pv)
+► Must equal: $1,082.86

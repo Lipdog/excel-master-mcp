@@ -26,6 +26,75 @@ def get_instruction_filepath(question_number):
     """Generate filepath for instruction file"""
     return os.path.join(INSTRUCTIONS_DIR, f'question_{question_number}_instructions.txt')
 
+def format_currency(amount):
+    """Format number as currency string"""
+    return f"${amount:,.2f}"
+
+def generate_balance_sheet_instructions(results):
+    """Generate instructions for balance sheet problems"""
+    # Extract values from results
+    current_assets = results['current_assets']
+    fixed_assets = results['fixed_assets']
+    current_liab = results['current_liabilities']
+    long_term_liab = results['long_term_liabilities']
+    equity = results['equity']
+    metrics = results['key_metrics']
+    
+    instructions = f"""
+Balance Sheet Structure and Calculations:
+
+1. Assets
+   A. Current Assets:
+      - Cash: {format_currency(current_assets['cash'])}
+      - Accounts Receivable: {format_currency(current_assets['accounts_receivable'])}
+      - Inventory: {format_currency(current_assets['inventory'])}
+      Total Current Assets: {format_currency(current_assets['total'])}
+
+   B. Fixed Assets:
+      - Net Fixed Assets (PPE): {format_currency(fixed_assets['net_fixed_assets'])}
+      Total Fixed Assets: {format_currency(fixed_assets['total'])}
+
+   Total Assets: {format_currency(results['total_assets'])}
+
+2. Liabilities & Stockholders' Equity
+   A. Current Liabilities:
+      - Accounts Payable: {format_currency(current_liab['accounts_payable'])}
+      - Notes Payable: {format_currency(current_liab['notes_payable'])}
+      Total Current Liabilities: {format_currency(current_liab['total'])}
+
+   B. Long-term Liabilities:
+      - Long-term Debt: {format_currency(long_term_liab['long_term_debt'])}
+      Total Long-term Liabilities: {format_currency(long_term_liab['total'])}
+
+   C. Stockholders' Equity:
+      - Common Stock: {format_currency(equity['common_stock'])}
+      - Retained Earnings: {format_currency(equity['retained_earnings'])}
+      Total Stockholders' Equity: {format_currency(equity['total'])}
+
+   Total Liabilities & Equity: {format_currency(results['total_liabilities'] + equity['total'])}
+
+Key Financial Metrics:
+
+1. Net Working Capital (NWC):
+   Calculation: Current Assets - Current Liabilities
+   {format_currency(current_assets['total'])} - {format_currency(current_liab['total'])} = {format_currency(metrics['nwc'])}
+
+2. Debt to Equity Ratio (D/E):
+   Calculation: Total Liabilities / Total Equity
+   {format_currency(results['total_liabilities'])} / {format_currency(equity['total'])} = {metrics['de_ratio']:.2f}
+
+Verification:
+1. Balance Sheet Balances:
+   Total Assets = Total Liabilities + Total Equity
+   {format_currency(results['total_assets'])} = {format_currency(results['total_liabilities'] + equity['total'])}
+
+2. Retained Earnings Calculation:
+   Total Assets - (Total Liabilities + Common Stock)
+   {format_currency(results['total_assets'])} - ({format_currency(results['total_liabilities'])} + {format_currency(equity['common_stock'])})
+   = {format_currency(equity['retained_earnings'])}
+"""
+    return instructions
+
 def generate_excel_instructions(problem_text, question_number):
     """Generate Excel instructions from financial problem analysis and solution"""
     try:
@@ -37,6 +106,64 @@ def generate_excel_instructions(problem_text, question_number):
         solve_result = solve_financial_problem(analysis_result)
         if not solve_result.get('success', False):
             raise ValueError(f"Solution failed: {solve_result.get('error', 'Unknown error')}")
+            
+        # Handle balance sheet problems differently
+        if solve_result.get('problem_type') == 'BALANCE_SHEET':
+            instructions = generate_balance_sheet_instructions(solve_result['results'])
+            return {
+                'success': True,
+                'instructions': instructions
+            }
+
+        # Handle bond problems
+        if any(step.get('params', {}).get('is_bond', False) for step in analysis_result.get('steps', [])):
+            bond_step = next(step for step in analysis_result['steps'] if step['params'].get('is_bond'))
+            bond_template = f"""
+For Question #{question_number}, generate Excel instructions for bond valuation:
+
+A. Inputs:
+Face_Value = ${bond_step['params']['fv']:,.2f}
+Coupon_Rate = {bond_step['params']['rate'] * 2:.2%} (annual)
+YTM = {bond_step['params']['rate'] * 2:.2%} (annual)
+Years_Remaining = {bond_step['params']['nper'] / 2}
+Payment_Frequency = Semiannual
+
+[blank line]
+B. Calculations:
+1. Semiannual_Rate = Annual YTM / 2
+   Excel: ={bond_step['params']['rate'] * 2:.2%}/2
+   ► Must equal: {bond_step['params']['rate']:.2%}
+
+2. Number_of_Periods = Years * 2
+   Excel: ={bond_step['params']['nper'] / 2}*2
+   ► Must equal: {bond_step['params']['nper']}
+
+3. Coupon_Payment = Face Value * (Annual Coupon Rate / 2)
+   Excel: =${bond_step['params']['fv']:,.2f}*({bond_step['params']['rate'] * 2:.2%}/2)
+   ► Must equal: ${bond_step['params']['pmt']:.2f}
+
+[blank line]
+C. Bond Price Calculation:
+Bond_Price = PV of coupon payments + PV of face value
+Excel: =PV(Semiannual_Rate, Number_of_Periods, -Coupon_Payment, -Face_Value)
+► Must equal: ${solve_result['result']:,.2f}
+
+[blank line]
+D. Verification:
+1. The bond price represents the present value of:
+   - {bond_step['params']['nper']} semiannual coupon payments of ${bond_step['params']['pmt']:.2f}
+   - Face value of ${bond_step['params']['fv']:,.2f} at maturity
+
+2. Price Components:
+   - PV of Coupons: =PV(Semiannual_Rate, Number_of_Periods, -Coupon_Payment)
+   - PV of Face Value: =PV(Semiannual_Rate, Number_of_Periods, 0, -Face_Value)
+
+3. Market Rate vs Coupon Rate:
+   {f"Bond sells at premium (Price > Face Value)" if solve_result['result'] > bond_step['params']['fv'] else
+    f"Bond sells at discount (Price < Face Value)" if solve_result['result'] < bond_step['params']['fv'] else
+    f"Bond sells at par (Price = Face Value)"}
+"""
+            return {'success': True, 'instructions': bond_template}
 
         # Determine if this is a comparison problem
         is_comparison = analysis_result.get('comparison_type') is not None

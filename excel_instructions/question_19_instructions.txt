@@ -1,0 +1,67 @@
+Excel Instructions for Question #19
+==================================================
+
+A. Inputs:
+Old_Card_Rate = 19.2% (annual)
+Old_Card_Payment = $250 (monthly)
+Old_Card_Balance = $5,000
+New_Card_Rate = 9.2% (annual)
+New_Card_Payment = $250 (monthly)
+New_Card_Balance = $5,000
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. Old_Card_MonthlyInterestRate = Old card interest rate divided by 12
+   Excel: =19.2%/12
+   ► Must equal: 0.016
+
+2. New_Card_MonthlyInterestRate = New card interest rate divided by 12
+   Excel: =9.2%/12
+   ► Must equal: 0.007666667
+
+3. Old_Card_NumberOfPayments = Number of payments to pay off old card
+   Excel: =NPER(Old_Card_MonthlyInterestRate, -Old_Card_Payment, Old_Card_Balance)
+   ► Must equal: 24.30
+
+4. New_Card_NumberOfPayments = Number of payments to pay off new card
+   Excel: =NPER(New_Card_MonthlyInterestRate, -New_Card_Payment, Old_Card_Balance)
+   ► Must equal: 21.79
+
+[blank line]
+C. Final Calculation:
+Decision = Compare number of payments
+Note: Choose card with fewer payments
+
+Excel with values:    =IF(24.30 > 21.79, "New Card", "Old Card")
+Excel with variables: =IF(Old_Card_NumberOfPayments > New_Card_NumberOfPayments, "New Card", "Old Card")
+► Must equal: "New Card" (because 24.30 > 21.79)
+
+D. Decision Analysis:
+1. Payment Comparison:
+   Excel: =CONCATENATE(
+     "Old Card (", TEXT(Old_Card_NumberOfPayments, "0.00"), " payments): ",
+     IF(Old_Card_NumberOfPayments > New_Card_NumberOfPayments, "Worse", "Better"),
+     " than New Card (", TEXT(New_Card_NumberOfPayments, "0.00"), " payments)"
+   )
+   ► Must equal: "Old Card (24.30 payments): Worse than New Card (21.79 payments)"
+
+2. Interest Rate Analysis:
+   Excel: =CONCATENATE(
+     "Old Card Interest Rate: ", TEXT(Old_Card_Rate, "0.0%"),
+     ", New Card Interest Rate: ", TEXT(New_Card_Rate, "0.0%")
+   )
+   ► Must equal: "Old Card Interest Rate: 19.2%, New Card Interest Rate: 9.2%"
+
+3. Total Payments Analysis:
+   Excel: =CONCATENATE(
+     "Old Card Total Payments: $", TEXT(Old_Card_NumberOfPayments * Old_Card_Payment, "#,##0.00"),
+     ", New Card Total Payments: $", TEXT(New_Card_NumberOfPayments * New_Card_Payment, "#,##0.00")
+   )
+   ► Must equal: "Old Card Total Payments: $6,074.06, New Card Total Payments: $5,447.50"
+
+4. Final Recommendation:
+   Transfer balance to the New Card because:
+   - It requires fewer payments (21.79 vs 24.30)
+   - It has a lower interest rate (9.2% vs 19.2%)
+   - Results in lower total payments ($5,447.50 vs $6,074.06)

@@ -1,0 +1,55 @@
+Excel Instructions for Question #17
+==================================================
+
+
+Balance Sheet Structure and Calculations:
+
+1. Assets
+   A. Current Assets:
+      - Cash: $134,000.00
+      - Accounts Receivable: $105,000.00
+      - Inventory: $293,000.00
+      Total Current Assets: $532,000.00
+
+   B. Fixed Assets:
+      - Net Fixed Assets (PPE): $1,730,000.00
+      Total Fixed Assets: $1,730,000.00
+
+   Total Assets: $2,262,000.00
+
+2. Liabilities & Stockholders' Equity
+   A. Current Liabilities:
+      - Accounts Payable: $210,000.00
+      - Notes Payable: $160,000.00
+      Total Current Liabilities: $370,000.00
+
+   B. Long-term Liabilities:
+      - Long-term Debt: $845,000.00
+      Total Long-term Liabilities: $845,000.00
+
+   C. Stockholders' Equity:
+      - Common Stock: $500,000.00
+      - Retained Earnings: $547,000.00
+      Total Stockholders' Equity: $1,047,000.00
+
+   Total Liabilities & Equity: $2,262,000.00
+
+Key Financial Metrics:
+
+1. Net Working Capital (NWC):
+   Calculation: Current Assets - Current Liabilities
+   $532,000.00 - $370,000.00 = $162,000.00
+
+2. Debt to Equity Ratio (D/E):
+   Calculation: Total Liabilities / Total Equity
+   $1,215,000.00 / $1,047,000.00 = 1.16
+
+Verification:
+1. Balance Sheet Balances:
+   Total Assets = Total Liabilities + Total Equity
+   $2,262,000.00 = $2,262,000.00
+
+2. Retained Earnings Calculation:
+   Total Assets - (Total Liabilities + Common Stock)
+   $2,262,000.00 - ($1,215,000.00 + $500,000.00)
+   = $547,000.00

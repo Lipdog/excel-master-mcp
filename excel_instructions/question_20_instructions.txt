@@ -1,0 +1,32 @@
+Excel Instructions for Question #20
+==================================================
+
+A. Inputs:
+Option_1_Amount = $0 (no lump sum)
+Option_2_Payment = $0 (no periodic payment)
+Interest_Rate = 8%
+Years = 16
+Payment_Frequency = Annual
+Future_Value = $75,000
+
+[blank line]
+B. Calculations:
+1. InterestRate = Interest rate
+   Excel: =8%
+   ► Must equal: 0.08
+
+2. NumberOfPeriods = Years
+   Excel: =16
+   ► Must equal: 16
+
+3. PresentValue = Present value of future value
+   Excel: =PV(InterestRate, NumberOfPeriods, 0, Future_Value)
+   ► Must equal: -$21,891.79
+
+[blank line]
+C. Final Calculation:
+Decision = Calculate the present value of the future value.
+
+Excel with values:    =PV(0.08, 16, 0, 75000)
+Excel with variables: =PV(InterestRate, NumberOfPeriods, 0, Future_Value)
+► Must equal: -$21,891.79

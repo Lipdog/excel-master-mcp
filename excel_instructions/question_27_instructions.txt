@@ -1,0 +1,26 @@
+Excel Instructions for Question #27
+==================================================
+
+A. Inputs:
+Interest_Rate = 15.9%
+Payment = $120 (monthly)
+Present_Value = $6,200
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =15.9%/12
+   ► Must equal: 0.01325
+
+2. NumberOfPayments = NPER function to calculate the number of payments
+   Excel: =NPER(MonthlyInterestRate, -Payment, Present_Value)
+   ► Must equal: 87.66
+
+[blank line]
+C. Final Calculation:
+Decision = Display the number of payments
+
+Excel with values: =87.66
+Excel with variables: =NumberOfPayments
+► Must equal: 87.66

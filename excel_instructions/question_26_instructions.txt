@@ -1,0 +1,22 @@
+Excel Instructions for Question #26
+==================================================
+
+A. Inputs:
+Interest_Rate = 8.25%
+Loan_Amount = $21,800
+Loan_Term = 5
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =8.25%/12
+   ► Must equal: 0.006875
+
+2. NumberOfPayments = Loan term * 12
+   Excel: =5*12
+   ► Must equal: 60
+
+3. Monthly_Payment = Payment calculation
+   Excel: =PMT(MonthlyInterestRate, NumberOfPayments, Loan_Amount)
+   ► Must equal: -$444.64

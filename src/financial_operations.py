@@ -41,22 +41,158 @@ def convert_rate(rate, from_freq, to_freq):
     effective_annual = (1 + rate/freq_map[from_freq])**freq_map[from_freq] - 1
     return (1 + effective_annual)**(1/freq_map[to_freq]) - 1
 
+class BalanceSheetCalculator:
+    """Calculator for balance sheet problems"""
+    def __init__(self, items):
+        self.items = items  # Dictionary of balance sheet items
+        
+    def calculate_current_assets(self):
+        """Calculate total current assets"""
+        return sum([
+            self.items.get('cash', 0),
+            self.items.get('accounts_receivable', 0),
+            self.items.get('inventory', 0)
+        ])
+        
+    def calculate_current_liabilities(self):
+        """Calculate total current liabilities"""
+        return sum([
+            self.items.get('accounts_payable', 0),
+            self.items.get('notes_payable', 0)
+        ])
+        
+    def calculate_total_assets(self):
+        """Calculate total assets"""
+        return self.calculate_current_assets() + self.items.get('net_fixed_assets', 0)
+        
+    def calculate_total_liabilities(self):
+        """Calculate total liabilities"""
+        return (self.calculate_current_liabilities() + 
+                self.items.get('long_term_debt', 0))
+                
+    def calculate_retained_earnings(self):
+        """Calculate retained earnings as plug number"""
+        return (self.calculate_total_assets() - 
+                (self.calculate_total_liabilities() + 
+                 self.items.get('common_stock', 0)))
+                 
+    def calculate_nwc(self):
+        """Calculate Net Working Capital"""
+        return self.calculate_current_assets() - self.calculate_current_liabilities()
+        
+    def calculate_de_ratio(self):
+        """Calculate Debt to Equity ratio"""
+        total_equity = (self.items.get('common_stock', 0) + 
+                       self.calculate_retained_earnings())
+        return self.calculate_total_liabilities() / total_equity if total_equity != 0 else float('inf')
+        
+    def calculate_all_metrics(self):
+        """Calculate all balance sheet metrics"""
+        retained_earnings = self.calculate_retained_earnings()
+        total_assets = self.calculate_total_assets()
+        total_liabilities = self.calculate_total_liabilities()
+        
+        return {
+            'current_assets': {
+                'cash': self.items.get('cash', 0),
+                'accounts_receivable': self.items.get('accounts_receivable', 0),
+                'inventory': self.items.get('inventory', 0),
+                'total': self.calculate_current_assets()
+            },
+            'fixed_assets': {
+                'net_fixed_assets': self.items.get('net_fixed_assets', 0),
+                'total': self.items.get('net_fixed_assets', 0)
+            },
+            'total_assets': total_assets,
+            'current_liabilities': {
+                'accounts_payable': self.items.get('accounts_payable', 0),
+                'notes_payable': self.items.get('notes_payable', 0),
+                'total': self.calculate_current_liabilities()
+            },
+            'long_term_liabilities': {
+                'long_term_debt': self.items.get('long_term_debt', 0),
+                'total': self.items.get('long_term_debt', 0)
+            },
+            'total_liabilities': total_liabilities,
+            'equity': {
+                'common_stock': self.items.get('common_stock', 0),
+                'retained_earnings': retained_earnings,
+                'total': self.items.get('common_stock', 0) + retained_earnings
+            },
+            'key_metrics': {
+                'nwc': self.calculate_nwc(),
+                'de_ratio': self.calculate_de_ratio()
+            }
+        }
+
 def analyze_with_gemini(problem_text):
     """Use Gemini to analyze financial problem text"""
     
     # Basic instructions without any variable interpolation
-    basic_instructions = """You are a financial calculator that extracts parameters from word problems.
+    basic_instructions = """You are a financial calculator that extracts parameters from word problems. First, determine if this is a Time Value of Money (TVM) problem or a Balance Sheet problem.
 
-Instructions:
-1. First identify if this is a comparison problem:
-   - Look for keywords: "which option", "compare", "choose between", "or"
-   - Check for different payment structures (lump sum vs payments)
+For Balance Sheet problems:
+1. Look for keywords: 
+   - "balance sheet"
+   - "retained earnings"
+   - "working capital"
+   - Lists of assets and liabilities
+
+2. Extract all balance sheet items and convert to numbers:
+   - Remove $ signs and commas
+   - Convert to float values
+   - Handle "and" or "&" in item names
+   - Standardize names (e.g., "PPE" to "net_fixed_assets")
+
+3. Categorize items:
+   Current Assets:
+   - cash
+   - accounts_receivable
+   - inventory
+
+   Fixed Assets:
+   - net_fixed_assets (also called PPE)
+
+   Current Liabilities:
+   - accounts_payable (including accruals)
+   - notes_payable
+
+   Long-term Liabilities:
+   - long_term_debt
+
+   Equity:
+   - common_stock (including paid-in capital)
+
+4. Return in format:
+   {
+     "problem_type": "BALANCE_SHEET",
+     "items": {
+       "cash": 134000.00,
+       "accounts_receivable": 105000.00,
+       "inventory": 293000.00,
+       "net_fixed_assets": 1730000.00,
+       "accounts_payable": 210000.00,
+       "notes_payable": 160000.00,
+       "long_term_debt": 845000.00,
+       "common_stock": 500000.00
+     }
+   }
+
+For TVM problems:
+1. Look for keywords:
+   - Interest rates
+   - Time periods
+   - Payment amounts
+   - Present/future values
+
+2. Identify if this is a comparison problem:
+   - Look for: "which option", "compare", "choose between", "or"
+   - Check for different payment structures
    - Check for different rates or terms
-   If it is a comparison problem, you MUST set comparison_type to either:
+
+3. Set comparison_type if needed:
    - "payment_structure" for comparing lump sum vs payments
-   - "rate" for comparing different interest rates
-   The comparison_type field is required for proper instruction generation.
-"""
+   - "rate" for comparing different interest rates"""
     
     # Multi-step calculation examples using raw strings to avoid f-string issues
     multi_step_examples = r"""
@@ -415,6 +551,15 @@ def evaluate_expression(expr, results):
 def solve_financial_problem(args):
     """Solve financial problem"""
     try:
+        # Handle balance sheet problems
+        if 'problem_type' in args and args['problem_type'] == 'BALANCE_SHEET':
+            calculator = BalanceSheetCalculator(args.get('items', {}))
+            return {
+                'success': True,
+                'problem_type': 'BALANCE_SHEET',
+                'results': calculator.calculate_all_metrics()
+            }
+
         sys.stderr.write(f"Solving problem with args: {json.dumps(args, indent=2)}\n")
         steps = args.get('steps', [])
         if not steps:
@@ -481,12 +626,26 @@ def analyze_financial_problem(args):
         # Use Gemini to analyze the problem
         gemini_result = analyze_with_gemini(problem_text)
         
-        if gemini_result:
+        if not gemini_result:
+            return {
+                'success': False,
+                'error': 'Failed to analyze problem with Gemini'
+            }
+
+        # Handle balance sheet problems
+        if gemini_result.get('problem_type') == 'BALANCE_SHEET':
+            return {
+                'success': True,
+                'problem_type': 'BALANCE_SHEET',
+                'items': gemini_result.get('items', {})
+            }
+
+        # Handle TVM problems
+        if 'steps' in gemini_result:
             # Handle both single-step and multi-step results
-            if 'steps' in gemini_result:
-                return {
-                    'success': True,
-                    'steps': gemini_result['steps'],
+            return {
+                'success': True,
+                'steps': gemini_result['steps'],
                     'comparison_type': gemini_result.get('comparison_type')
                 }
             return {
@@ -494,12 +653,6 @@ def analyze_financial_problem(args):
                 'steps': [{'problem_type': gemini_result['problem_type'], 'params': gemini_result['params'], 'final_step': True}]
             }
             
-        # If Gemini fails, return error
-        return {
-            'success': False,
-            'error': 'Failed to analyze problem with Gemini'
-        }
-        
     except Exception as e:
         return {
             'success': False,

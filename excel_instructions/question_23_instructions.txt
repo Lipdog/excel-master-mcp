@@ -1,0 +1,21 @@
+Excel Instructions for Question #23
+==================================================
+
+A. Inputs:
+Interest_Rate = 6%
+Present_Value = -$1
+Future_Value = $4
+Payment = $0
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+1. YearsToQuadruple = Number of years to quadruple investment
+   Excel: =NPER(Interest_Rate, Payment, Present_Value, Future_Value)
+   ► Must equal: 23.79
+
+[blank line]
+C. Final Calculation:
+YearsToQuadruple = Years to quadruple investment
+Excel: =NPER(Interest_Rate, Payment, Present_Value, Future_Value)
+► Must equal: 23.79

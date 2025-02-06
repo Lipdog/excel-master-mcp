@@ -1,0 +1,23 @@
+Excel Instructions for Question #24
+==================================================
+
+A. Inputs:
+Rate = 8.5%
+Nper = 5
+Pmt = $240 (monthly)
+Fv = $0
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =8.5%/12
+   ► Must equal: 0.007083333
+
+2. NumberOfPayments = Nper * 12
+   Excel: =5*12
+   ► Must equal: 60
+
+3. Loan_Amount = Present value of payments
+   Excel: =PV(MonthlyInterestRate, NumberOfPayments, -Pmt, Fv)
+   ► Must equal: $11,697.88

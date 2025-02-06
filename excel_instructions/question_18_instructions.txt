@@ -1,0 +1,61 @@
+Excel Instructions for Question #18
+==================================================
+
+A. Inputs:
+Stock_Rate = 8%
+Bond_Rate = 4%
+Retirement_Rate = 5%
+Years_Stock_Bond = 15
+Years_Retirement = 20
+Stock_Payment = $1,100 (monthly)
+Bond_Payment = $500 (monthly)
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. Stock_MonthlyInterestRate = Stock rate divided by 12
+   Excel: =8%/12
+   ► Must equal: 0.006666666666666667
+
+2. Stock_NumberOfPayments = Years * 12
+   Excel: =15*12
+   ► Must equal: 180
+
+3. Stock_FutureValue = Future value of stock payments
+   Excel: =FV(Stock_MonthlyInterestRate, Stock_NumberOfPayments, -Stock_Payment, 0)
+   ► Must equal: $380,642.04
+
+[blank line]
+4. Bond_MonthlyInterestRate = Bond rate divided by 12
+   Excel: =4%/12
+   ► Must equal: 0.0033333333333333335
+
+5. Bond_NumberOfPayments = Years * 12
+   Excel: =15*12
+   ► Must equal: 180
+
+6. Bond_FutureValue = Future value of bond payments
+   Excel: =FV(Bond_MonthlyInterestRate, Bond_NumberOfPayments, -Bond_Payment, 0)
+   ► Must equal: $123,045.24
+
+[blank line]
+7. Retirement_MonthlyInterestRate = Retirement rate divided by 12
+   Excel: =5%/12
+   ► Must equal: 0.004166666666666667
+
+8. Retirement_NumberOfPayments = Years * 12
+   Excel: =20*12
+   ► Must equal: 240
+
+9. Retirement_Payment = Retirement payment needed
+   Excel: =PMT(Retirement_MonthlyInterestRate, Retirement_NumberOfPayments, -(Stock_FutureValue+Bond_FutureValue), 0)
+   ► Must equal: -$3,324.11
+
+[blank line]
+C. Final Calculation:
+Retirement Payment = PMT
+Note: This is the monthly payment needed during retirement.
+
+Excel with values: =PMT(5%/12, 20*12, -(380642.04+123045.24), 0)
+Excel with variables: =PMT(Retirement_MonthlyInterestRate, Retirement_NumberOfPayments, -(Stock_FutureValue+Bond_FutureValue), 0)
+► Must equal: -$3,324.11

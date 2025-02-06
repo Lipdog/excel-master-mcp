@@ -1,0 +1,31 @@
+Excel Instructions for Question #30
+==================================================
+
+A. Inputs:
+Rate = 10% (annual)
+Years_Depositing = 15
+Years_Existing = 30
+Annual_Deposit = $12,000
+Existing_Savings = $20,000
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+1. FutureValueOfDeposits = Future value of the deposits
+   Excel: =FV(Rate, Years_Depositing, -Annual_Deposit, 0)
+   ► Must equal: $381,269.78
+
+2. FutureValueOfExistingSavings = Future value of the existing savings
+   Excel: =FV(Rate, Years_Existing, 0, -Existing_Savings)
+   ► Must equal: $348,988.05
+
+3. FutureValueOfDepositsAfterExistingPeriod = Future value of the deposits after the existing savings period
+   Excel: =FV(Rate, Years_Existing - Years_Depositing, 0, -FutureValueOfDeposits)
+   ► Must equal: -$1,592,658.49
+
+[blank line]
+C. Final Calculation:
+TotalFutureValue = Future value of deposits after existing period
+Excel with values:    =-1592658.49
+Excel with variables: =FutureValueOfDepositsAfterExistingPeriod
+► Must equal: -$1,592,658.49

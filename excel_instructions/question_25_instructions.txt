@@ -1,0 +1,23 @@
+Excel Instructions for Question #25
+==================================================
+
+A. Inputs:
+Option_1_Amount = $10,000 (lump sum)
+Option_2_Payment = $3,600 (annual)
+Interest_Rate = 8%
+Years = 12
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+1. FutureValue = Future value of investment
+   Excel: =FV(Interest_Rate, Years, -Option_2_Payment, -Option_1_Amount)
+   ► Must equal: $93,499.36
+
+[blank line]
+C. Final Calculation:
+Decision = Calculate the future value of the investment
+
+Excel with values:    =FV(8%, 12, -3600, -10000)
+Excel with variables: =FV(Interest_Rate, Years, -Option_2_Payment, -Option_1_Amount)
+► Must equal: $93,499.36
