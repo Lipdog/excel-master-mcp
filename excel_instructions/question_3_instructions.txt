@@ -1,0 +1,27 @@
+Excel Instructions for Question #3
+==================================================
+
+A. Inputs:
+Payment_Amount = $1400
+Interest_Rate = 6%
+Number_of_Periods = 20
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =6%/12
+   ► Must equal: 0.005
+
+2. Periods = Number of periods
+   Excel: =20
+   ► Must equal: 20
+
+[blank line]
+C. Final Calculation:
+PresentValue = Present Value of Annuity
+Note: Negative sign on payment represents cash outflow in PV function
+
+Excel with values:    =PV(0.005, 20, -1400)
+Excel with variables: =PV(MonthlyInterestRate, Periods, -Payment_Amount)
+► Must equal: -25274.97

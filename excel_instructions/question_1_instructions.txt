@@ -1,0 +1,30 @@
+Excel Instructions for Question #1
+==================================================
+
+A. Inputs:
+Face_Value = $1000
+Coupon_Rate = 7%
+Years_to_Maturity = 16
+Yield_to_Maturity = 6.48%
+Payment_Frequency = Semiannual
+
+B. Calculations:
+1. SemiannualYTM = Yield to maturity divided by 2
+   Excel: =6.48%/2
+   ► Must equal: 0.0324
+
+2. Periods = Years to maturity multiplied by 2
+   Excel: =16*2
+   ► Must equal: 32
+
+3. SemiannualPayment = (Coupon rate * Face value) / 2
+   Excel: =(7%*1000)/2
+   ► Must equal: 35
+
+C. Final Calculation:
+BondPrice = Present Value of Bond
+Note: Negative signs on payment and face value represent cash outflows in PV function
+
+Excel with values:    =PV(0.0324, 32, -35, -1000)
+Excel with variables: =PV(SemiannualYTM, Periods, -SemiannualPayment, -FaceValue)
+► Must equal: 1051.32

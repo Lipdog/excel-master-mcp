@@ -1,0 +1,16 @@
+{
+  "name": "excelmaster",
+  "version": "1.0.0",
+  "description": "MCP server for Excel operations using XLwings",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": ["mcp", "excel", "xlwings"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  }
+}

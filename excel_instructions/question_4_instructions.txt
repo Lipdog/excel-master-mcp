@@ -1,0 +1,22 @@
+Excel Instructions for Question #4
+==================================================
+
+A. Inputs:
+Rate = 6%
+Periods = 20
+Payment = $16800
+Face_Value = $0
+Payment_Frequency = Annual
+
+[blank line]
+B. Calculations:
+N/A - No intermediate calculations needed
+
+[blank line]
+C. Final Calculation:
+Present_Value = Present Value of Annuity
+Note: Negative sign on payment represents cash outflow in PV function
+
+Excel with values:    =PV(6%, 20, -16800, 0)
+Excel with variables: =PV(Rate, Periods, -Payment, Face_Value)
+► Must equal: -192694.68

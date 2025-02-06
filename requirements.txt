@@ -1,0 +1,2 @@
+xlwings>=0.30.0
+numpy-financial>=1.0.0

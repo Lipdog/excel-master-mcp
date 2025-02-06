@@ -1,0 +1,36 @@
+Excel Instructions for Question #2
+==================================================
+
+A. Inputs:
+Rate = 5%
+Periods = 20
+Present_Value = Stock Future Value + Bond Future Value
+Future_Value = $0
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyRate = Rate divided by 12
+   Excel: =5%/12
+   ► Must equal: 0.004166666666666667
+
+2. NumberOfPeriods = Periods multiplied by 12
+   Excel: =20*12
+   ► Must equal: 240
+
+3. StockFutureValue = Future Value of Stock
+   Excel: =FV(8%/12, 15*12, -1100, 0)
+   ► Must equal: 380642.04
+
+4. BondFutureValue = Future Value of Bond
+   Excel: =FV(4%/12, 15*12, -500, 0)
+   ► Must equal: 123045.24
+
+[blank line]
+C. Final Calculation:
+RetirementPayment = Payment needed for retirement
+Note: Negative sign on the result represents cash outflow in PMT function
+
+Excel with values:    =PMT(0.004166666666666667, 240, 503687.28, 0)
+Excel with variables: =PMT(MonthlyRate, NumberOfPeriods, StockFutureValue+BondFutureValue, Future_Value)
+► Must equal: -3324.11
