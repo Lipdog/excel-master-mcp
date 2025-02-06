@@ -1,0 +1,67 @@
+Excel Instructions for Question #14
+==================================================
+
+A. Inputs:
+Option_1_Amount = $200,000 (lump sum)
+Option_2_Payment = $1,400 (monthly)
+Interest_Rate = 6%
+Years = 20
+Payment_Frequency = Monthly
+
+[blank line]
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =6%/12
+   ► Must equal: 0.005
+
+2. NumberOfPayments = Years * 12
+   Excel: =20*12
+   ► Must equal: 240
+
+3. TotalPayments = Monthly payment * Number of payments
+   Excel: =1400*240
+   ► Must equal: $336,000
+
+4. PresentValueOfPayments = Present value of monthly payments
+   Excel: =PV(MonthlyInterestRate, NumberOfPayments, -Option_2_Payment)
+   ► Must equal: $195,413.08
+
+[blank line]
+C. Final Calculation:
+Decision = Compare lump sum to present value
+Note: Choose option with higher present value
+
+Excel with values:    =IF(200000 > 195413.08, "Take lump sum", "Take monthly payments")
+Excel with variables: =IF(Option_1_Amount > PresentValueOfPayments, "Take lump sum", "Take monthly payments")
+► Must equal: "Take lump sum" (because $200,000 > $195,413.08)
+
+D. Decision Analysis:
+1. Option Comparison:
+   Excel: =CONCATENATE(
+     "Lump Sum ($", TEXT(Option_1_Amount, "#,##0"), "): ",
+     IF(Option_1_Amount > PresentValueOfPayments, "Better", "Worse"),
+     " than monthly payments worth $", TEXT(PresentValueOfPayments, "#,##0")
+   )
+   ► Must equal: "Lump Sum ($200,000): Better than monthly payments worth $195,413"
+
+2. Total Payments Analysis:
+   Excel: =CONCATENATE(
+     "Total payments ($", TEXT(TotalPayments, "#,##0"),
+     ") exceed lump sum by $", TEXT(TotalPayments - Option_1_Amount, "#,##0")
+   )
+   ► Must equal: "Total payments ($336,000) exceed lump sum by $136,000"
+
+3. Time Value Analysis:
+   Excel: =CONCATENATE(
+     "Monthly payments worth $", TEXT(PresentValueOfPayments, "#,##0"),
+     " in today's dollars ($", TEXT(TotalPayments - PresentValueOfPayments, "#,##0"),
+     " lost to time value of money)"
+   )
+   ► Must equal: "Monthly payments worth $195,413 in today's dollars ($140,587 lost to time value of money)"
+
+4. Final Recommendation:
+   Take the $200,000 lump sum because:
+   - It has a higher present value ($200,000 vs $195,413)
+   - Provides immediate access to full amount
+   - Avoids loss of $140,587 to time value of money
+   - Offers more flexibility for investment or immediate use

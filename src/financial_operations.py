@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import json
 import sys
@@ -15,7 +14,10 @@ model = genai.GenerativeModel('gemini-2.0-flash-001')  # Use flash model for str
 
 def round_currency(amount):
     """Round to 2 decimal places using banker's rounding"""
-    return float(Decimal(str(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    if isinstance(amount, bool):
+        return amount
+    else:
+        return float(Decimal(str(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 def calculate_real_rate(nominal_rate, inflation_rate):
     """Calculate real rate using Fisher Effect: (1 + R) = (1 + r)(1 + h)"""
@@ -46,12 +48,15 @@ def analyze_with_gemini(problem_text):
     basic_instructions = """You are a financial calculator that extracts parameters from word problems.
 
 Instructions:
-1. Identify the type of financial calculation needed:
-    - FV (Future Value): Finding final amount after investment/growth
-    - PV (Present Value): Finding initial amount needed for future goal
-    - PMT (Payment): Finding periodic payment amount
-    - NPER (Number of Periods): Finding time needed in years
-    - RATE (Interest Rate): Finding required interest rate"""
+1. First identify if this is a comparison problem:
+   - Look for keywords: "which option", "compare", "choose between", "or"
+   - Check for different payment structures (lump sum vs payments)
+   - Check for different rates or terms
+   If it is a comparison problem, you MUST set comparison_type to either:
+   - "payment_structure" for comparing lump sum vs payments
+   - "rate" for comparing different interest rates
+   The comparison_type field is required for proper instruction generation.
+"""
     
     # Multi-step calculation examples using raw strings to avoid f-string issues
     multi_step_examples = r"""
@@ -95,7 +100,7 @@ For multi-step calculations:
     }"""
 
     # Credit card comparison example as a separate raw string
-    credit_card_example = r"""4. Rate Comparison Problems:
+    comparison_examples = r"""4. Rate Comparison Problems:
     - Calculate NPER or PMT for each rate
     - Use arithmetic to find difference
     Example: "Compare 19.2% vs 9.2% credit card payments"
@@ -125,7 +130,51 @@ For multi-step calculations:
           },
           "final_step": true
         }
-      ]
+      ],
+      "comparison_type": "rate"
+    }
+    
+    5. Payment Structure Comparison Problems:
+    - Compare different payment structures (e.g., lump sum vs payments)
+    - Calculate present value for payment stream
+    - Compare with lump sum option
+    Example: "Choose between $200,000 lump sum or $1,400 monthly for 20 years at 6%"
+    Steps:
+    {
+      "steps": [
+        {
+          "id": "monthly_payments",
+          "problem_type": "PV",
+          "result_var": "payment_stream_pv",
+          "params": {
+            "rate": 0.06,
+            "nper": 20,
+            "pmt": -1400,
+            "fv": 0,
+            "payment_frequency": "monthly"
+          }
+        },
+        {
+          "id": "lump_sum",
+          "problem_type": "PV",
+          "result_var": "lump_sum_pv",
+          "params": {
+            "pv": 200000
+          }
+        },
+        {
+          "id": "comparison",
+          "problem_type": "COMPARE",
+          "params": {
+            "option1": "{lump_sum_pv}",
+            "option2": "{payment_stream_pv}",
+            "comparison_type": "'payment_structure'"
+          },
+          "result_var": "better_option",
+          "final_step": true
+        }
+      ],
+      "comparison_type": "payment_structure"
     }"""
 
     # Additional calculation types and rules
@@ -211,7 +260,7 @@ Important:
     full_instructions = "\n".join([
         basic_instructions,
         multi_step_examples,
-        credit_card_example,
+        comparison_examples,
         additional_rules,
         param_instructions,
         json_template,
@@ -295,12 +344,21 @@ def calculate_financial(problem_type, params):
             else:
                 nper = math.ceil(nper * 2)  # Round up for fractional years in non-bond calculations
         
+        # Special case: when only PV is provided, just return it
+        if problem_type == 'PV' and pv != 0 and not any([rate, nper, pmt, fv]):
+            return pv
+        
+        # Standard financial calculations
         calculators = {
             'FV': lambda: npf.fv(rate, nper, pmt, pv),
             'PV': lambda: npf.pv(rate, nper, pmt, fv),
             'PMT': lambda: npf.pmt(rate, nper, pv, fv),
             'NPER': lambda: npf.nper(rate, pmt, pv, fv),
-            'RATE': lambda: npf.rate(nper, pmt, pv, fv)
+            'RATE': lambda: npf.rate(nper, pmt, pv, fv),
+            'COMPARE': lambda: {
+                'payment_structure': lambda: float(params['option1']) > float(params['option2']), 
+                'rate': lambda: float(params['option1']) < float(params['option2'])
+            }[params.get('comparison_type', 'payment_structure').replace("'", "")]()
         }
         
         calculator = calculators.get(problem_type)
@@ -333,7 +391,7 @@ def evaluate_expression(expr, results):
         return expr
         
     # Don't evaluate payment frequency and other string parameters
-    if expr in ['annual', 'semiannual', 'monthly']:
+    if expr in ['annual', 'semiannual', 'monthly', 'payment_structure', 'rate'] or (expr.startswith("'") and expr.endswith("'")):
         return expr
         
     # Find all variable references in the expression
@@ -357,6 +415,7 @@ def evaluate_expression(expr, results):
 def solve_financial_problem(args):
     """Solve financial problem"""
     try:
+        sys.stderr.write(f"Solving problem with args: {json.dumps(args, indent=2)}\n")
         steps = args.get('steps', [])
         if not steps:
             # Handle legacy single-step format
@@ -374,11 +433,16 @@ def solve_financial_problem(args):
         for step in steps:
             # Resolve any dependencies
             params = step['params'].copy()
+            sys.stderr.write(f"Processing step: {json.dumps(step, indent=2)}\n")
             
             # Evaluate any arithmetic expressions in parameters
             for param, value in params.items():
                 try:
-                    evaluated_value = evaluate_expression(value, results)
+                    if param == 'comparison_type':
+                        # Handle comparison_type directly
+                        evaluated_value = value.replace("'", "")
+                    else:
+                        evaluated_value = evaluate_expression(value, results)
                     params[param] = evaluated_value
                 except Exception as e:
                     raise ValueError(f"Failed to evaluate {param}: {str(e)}")
@@ -422,7 +486,8 @@ def analyze_financial_problem(args):
             if 'steps' in gemini_result:
                 return {
                     'success': True,
-                    'steps': gemini_result['steps']
+                    'steps': gemini_result['steps'],
+                    'comparison_type': gemini_result.get('comparison_type')
                 }
             return {
                 'success': True,

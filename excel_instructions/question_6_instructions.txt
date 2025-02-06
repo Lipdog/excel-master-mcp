@@ -1,0 +1,34 @@
+Excel Instructions for Question #6
+==================================================
+
+A. Inputs:
+Option_1_Amount = $200,000 (lump sum)
+Option_2_Payment = $1,400 (monthly)
+Interest_Rate = 6%
+Years = 20
+Payment_Frequency = Monthly
+
+B. Calculations:
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =6%/12
+   ► Must equal: 0.005
+
+2. NumberOfPayments = Years * 12
+   Excel: =20*12
+   ► Must equal: 240
+
+3. TotalPayments = Monthly payment * Number of payments
+   Excel: =1400*240
+   ► Must equal: $336,000
+
+4. PresentValueOfPayments = Present value of monthly payments
+   Excel: =PV(MonthlyInterestRate, NumberOfPayments, -Option_2_Payment)
+   ► Must equal: $195,413.08
+
+C. Final Calculation:
+Decision = Compare lump sum to present value
+Note: Choose option with higher present value
+
+Excel with values:    =IF(200000 > 195413.08, "Take lump sum", "Take monthly payments")
+Excel with variables: =IF(Option_1_Amount > PresentValueOfPayments, "Take lump sum", "Take monthly payments")
+► Must equal: "Take lump sum" (because $200,000 > $195,413.08)

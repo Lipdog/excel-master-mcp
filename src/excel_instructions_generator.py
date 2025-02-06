@@ -38,53 +38,97 @@ def generate_excel_instructions(problem_text, question_number):
         if not solve_result.get('success', False):
             raise ValueError(f"Solution failed: {solve_result.get('error', 'Unknown error')}")
 
-        # Create prompt for Gemini
-        prompt = f"""
+        # Determine if this is a comparison problem
+        is_comparison = analysis_result.get('comparison_type') is not None
+
+        # Base template for all problems
+        base_template = f"""
 For Question #{question_number}, generate Excel instructions in this exact format:
 
 A. Inputs:
-Face_Value = $1000
-Coupon_Rate = 7%
-Years_to_Maturity = 16
-Yield_to_Maturity = 6.48%
-Payment_Frequency = Semiannual
+Option_1_Amount = $200,000 (lump sum)
+Option_2_Payment = $1,400 (monthly)
+Interest_Rate = 6%
+Years = 20
+Payment_Frequency = Monthly
 
 [blank line]
 B. Calculations:
-1. SemiannualYTM = Yield to maturity divided by 2
-   Excel: =6.48%/2
-   ► Must equal: 0.0324
+1. MonthlyInterestRate = Interest rate divided by 12
+   Excel: =6%/12
+   ► Must equal: 0.005
 
-2. Periods = Years to maturity multiplied by 2
-   Excel: =16*2
-   ► Must equal: 32
+2. NumberOfPayments = Years * 12
+   Excel: =20*12
+   ► Must equal: 240
 
-3. SemiannualPayment = (Coupon rate * Face value) / 2
-   Excel: =(7%*1000)/2
-   ► Must equal: 35
+3. TotalPayments = Monthly payment * Number of payments
+   Excel: =1400*240
+   ► Must equal: $336,000
+
+4. PresentValueOfPayments = Present value of monthly payments
+   Excel: =PV(MonthlyInterestRate, NumberOfPayments, -Option_2_Payment)
+   ► Must equal: $195,413.21
 
 [blank line]
 C. Final Calculation:
-BondPrice = Present Value of Bond
-Note: Negative signs on payment and face value represent cash outflows in PV function
+Decision = Compare lump sum to present value
+Note: Choose option with higher present value
 
-Excel with values:    =PV(0.0324, 32, -35, -1000)
-Excel with variables: =PV(SemiannualYTM, Periods, -SemiannualPayment, -FaceValue)
-► Must equal: 1051.32
+Excel with values:    =IF(200000 > 195413.21, "Take lump sum", "Take monthly payments")
+Excel with variables: =IF(Option_1_Amount > PresentValueOfPayments, "Take lump sum", "Take monthly payments")
+► Must equal: "Take lump sum" (because $200,000 > $195,413.21)"""
+
+        # Additional template for comparison problems
+        comparison_template = """
+
+D. Decision Analysis:
+1. Option Comparison:
+   Excel: =CONCATENATE(
+     "Lump Sum ($", TEXT(Option_1_Amount, "#,##0"), "): ",
+     IF(Option_1_Amount > PresentValueOfPayments, "Better", "Worse"),
+     " than monthly payments worth $", TEXT(PresentValueOfPayments, "#,##0")
+   )
+   ► Must equal: "Lump Sum ($200,000): Better than monthly payments worth $195,413"
+
+2. Total Payments Analysis:
+   Excel: =CONCATENATE(
+     "Total payments ($", TEXT(TotalPayments, "#,##0"),
+     ") exceed lump sum by $", TEXT(TotalPayments - Option_1_Amount, "#,##0")
+   )
+   ► Must equal: "Total payments ($336,000) exceed lump sum by $136,000"
+
+3. Time Value Analysis:
+   Excel: =CONCATENATE(
+     "Monthly payments worth $", TEXT(PresentValueOfPayments, "#,##0"),
+     " in today's dollars ($", TEXT(TotalPayments - PresentValueOfPayments, "#,##0"),
+     " lost to time value of money)"
+   )
+   ► Must equal: "Monthly payments worth $195,413 in today's dollars ($140,587 lost to time value of money)"
+
+4. Final Recommendation:
+   Take the $200,000 lump sum because:
+   - It has a higher present value ($200,000 vs $195,413)
+   - Provides immediate access to full amount
+   - Avoids loss of $140,587 to time value of money
+   - Offers more flexibility for investment or immediate use"""
+
+        # Combine templates based on problem type
+        prompt = base_template + (comparison_template if is_comparison else "") + f"""
 
 Important formatting rules:
 1. Show percentages as percentages (7% not 0.07)
 2. Show currency with $ sign
-3. Use descriptive text for frequencies (Semiannual not 2)
+3. Use descriptive text for frequencies (Monthly not 12)
 4. Use consistent variable names:
-   - SemiannualYTM for the rate per period
-   - Periods for number of periods
-   - SemiannualPayment for the payment amount
-   - FaceValue for the principal
-5. Explain negative signs in the Note
+   - MonthlyInterestRate for the rate per period
+   - NumberOfPayments for total periods
+   - Option_1_Amount for lump sum
+   - Option_2_Payment for periodic payment
+5. Explain the decision criteria in the Note
 6. Align the final formulas for easy comparison
 7. Use arrows (►) to highlight expected values
-8. Add blank lines between major sections (A, B, C)
+8. Add blank lines between major sections
 
 Use these calculation results:
 Analysis Result:
