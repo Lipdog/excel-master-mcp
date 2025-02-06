@@ -2,6 +2,7 @@
 import json
 import sys
 import os
+import math
 import google.generativeai as genai
 from financial_operations import analyze_financial_problem, solve_financial_problem
 
@@ -146,7 +147,7 @@ B. Calculations:
 C. Bond Price Calculation:
 Bond_Price = PV of coupon payments + PV of face value
 Excel: =PV(Semiannual_Rate, Number_of_Periods, -Coupon_Payment, -Face_Value)
-► Must equal: ${solve_result['result']:,.2f}
+► Must equal: ${solve_result['result']['price'] if isinstance(solve_result['result'], dict) else solve_result['result']:,.2f}
 
 [blank line]
 D. Verification:
@@ -159,10 +160,71 @@ D. Verification:
    - PV of Face Value: =PV(Semiannual_Rate, Number_of_Periods, 0, -Face_Value)
 
 3. Market Rate vs Coupon Rate:
-   {f"Bond sells at premium (Price > Face Value)" if solve_result['result'] > bond_step['params']['fv'] else
-    f"Bond sells at discount (Price < Face Value)" if solve_result['result'] < bond_step['params']['fv'] else
+   {f"Bond sells at premium (Price > Face Value)" if (solve_result['result']['price'] if isinstance(solve_result['result'], dict) else solve_result['result']) > bond_step['params']['fv'] else
+    f"Bond sells at discount (Price < Face Value)" if (solve_result['result']['price'] if isinstance(solve_result['result'], dict) else solve_result['result']) < bond_step['params']['fv'] else
     f"Bond sells at par (Price = Face Value)"}
+
+
+E. Duration and Convexity Analysis:
+1. Macaulay Duration:
+   - Sum of PV-weighted time periods divided by bond price
+   Excel: Calculate for each cash flow:
+   =SUM(
+     Time_Period * PV_CashFlow
+   ) / Bond_Price / Payment_Frequency
+   ► Must equal: {solve_result['result'].get('duration', 0) if isinstance(solve_result['result'], dict) else 0:.4f} years
+
+2. Modified Duration:
+   - Macaulay Duration adjusted for yield
+   Excel: =Macaulay_Duration / (1 + Semiannual_Rate)
+   ► Must equal: {solve_result['result'].get('modified_duration', 0) if isinstance(solve_result['result'], dict) else 0:.4f} years
+
+3. Convexity:
+   - Second derivative of price with respect to yield
+   Excel: Calculate for each cash flow:
+   =SUM(
+     Time_Period * (Time_Period + 1) * PV_CashFlow
+   ) / (Bond_Price * (1 + Semiannual_Rate)^2 * Payment_Frequency^2)
+   ► Must equal: {solve_result['result'].get('convexity', 0) if isinstance(solve_result['result'], dict) else 0:.4f}
+
+F. Price Sensitivity Analysis:
+1. Duration Effect:
+   - First-order price change
+   Excel: =-Modified_Duration * Change_In_Yield * Bond_Price
+
+2. Convexity Effect:
+   - Second-order price change
+   Excel: =0.5 * Convexity * (Change_In_Yield)^2 * Bond_Price
+
+3. Total Price Change:
+   Excel: =Duration_Effect + Convexity_Effect
+
+G. Additional Metrics:
+1. Yield Spread:
+   Excel: =YTM - Risk_Free_Rate
+
+2. Interest Rate Risk:
+   Excel: =-Modified_Duration * Bond_Price * 0.01
 """
+            # Add continuous compounding section if needed
+            if bond_step['params'].get('compound_type') == 'continuous':
+                bond_template += f"""
+I. Continuous Compounding Analysis:
+1. Convert to Continuous Rate:
+   - From discrete to continuous compounding
+   Excel: =LN(1 + Annual_Rate)
+   ► Must equal: {math.log(1 + bond_step['params']['rate'] * 2):.6f}
+
+2. Present Value (Continuous):
+   - For each cash flow:
+   Excel: =Amount * EXP(-Continuous_Rate * Time)
+   Example for first payment:
+   =Coupon_Payment * EXP(-Continuous_Rate * (1/Payment_Frequency))
+
+3. Effective Annual Rate:
+   - Convert continuous back to annual
+   Excel: =EXP(Continuous_Rate) - 1
+   ► Must equal: {math.exp(math.log(1 + bond_step['params']['rate'] * 2)) - 1:.6f}"""
             return {'success': True, 'instructions': bond_template}
 
         # Determine if this is a comparison problem
@@ -246,12 +308,16 @@ D. Decision Analysis:
 Important formatting rules:
 1. Show percentages as percentages (7% not 0.07)
 2. Show currency with $ sign
-3. Use descriptive text for frequencies (Monthly not 12)
-4. Use consistent variable names:
+3. Use descriptive text for frequencies (Monthly, Semiannual, etc.)
+4. For continuous compounding, use LN() and EXP() functions
+5. For day count conventions, use DATEDIF() for actual day counts
+6. Use consistent variable names:
    - MonthlyInterestRate for the rate per period
    - NumberOfPayments for total periods
    - Option_1_Amount for lump sum
    - Option_2_Payment for periodic payment
+    - Day_Count for convention type
+    - Continuous_Rate for continuous compounding
 5. Explain the decision criteria in the Note
 6. Align the final formulas for easy comparison
 7. Use arrows (►) to highlight expected values
